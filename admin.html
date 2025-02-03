@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Upload</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.10/dist/sweetalert2.min.css">
+
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1e1e2d;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+        h1 {
+            color: #b946c4;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .container {
+            max-width: 500px;
+            background: #2a2a3a;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.1);
+        }
+        .custom-file-input {
+            position: relative;
+            width: 100%;
+            cursor: pointer;
+        }
+        .custom-file-label {
+            background-color: #b946c4;
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+            transition: background 0.3s;
+        }
+        .custom-file-label:hover {
+            background-color: #a63eae;
+        }
+        .btn-upload {
+            background-color: #b946c4;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-weight: 600;
+            border-radius: 5px;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        .btn-upload:hover {
+            background-color: #a63eae;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 15px;
+            color: #b946c4;
+            font-weight: 600;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+            color: #a63eae;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Admin Upload</h1>
+    <form id="uploadForm" action="/admin" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="imageUpload" class="custom-file-label"><i class="fas fa-upload"></i> Choose an Image</label>
+            <input type="file" name="image" id="imageUpload" class="form-control custom-file-input" required>
+        </div>
+        <button type="submit" class="btn btn-upload"><i class="fas fa-database"></i> Upload to Database</button>
+    </form>
+    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.6.10/dist/sweetalert2.all.min.js"></script>
+
+<script>
+    // Listen for form submission
+    const form = document.getElementById('uploadForm');
+    
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();  // Prevent the default form submission
+        
+        const formData = new FormData(form);
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (response.ok) {
+            // Show success message
+            Swal.fire({
+                title: 'Success!',
+                text: 'Image uploaded to the database.',
+                icon: 'success',
+                confirmButtonColor: '#b946c4',
+                background: '#2a2a3a',
+                color: 'white',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                window.location.href = '/admin'; // Redirect to home after success
+            });
+        } else {
+            // Show error message
+            Swal.fire({
+                title: 'Error!',
+                text: 'There was an issue with the image upload.',
+                icon: 'error',
+                confirmButtonColor: '#b946c4',
+                background: '#2a2a3a',
+                color: 'white',
+                confirmButtonText: 'Try Again'
+            });
+        }
+    });
+</script>
+
+</body>
+</html>
