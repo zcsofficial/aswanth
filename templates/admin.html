@@ -93,9 +93,9 @@
 <div class="container">
     <h1>Admin Upload</h1>
     <form id="uploadForm" action="/admin" method="post" enctype="multipart/form-data">
-        <div class="mb-3">
+        <div>
             <label for="imageUpload" class="custom-file-label"><i class="fas fa-upload"></i> Choose an Image</label>
-            <input type="file" name="image" id="imageUpload" class="form-control custom-file-input" required>
+            <input type="file" name="image" id="imageUpload" class="form-control custom-file-input my-3" required>
         </div>
         <button type="submit" class="btn btn-upload"><i class="fas fa-database"></i> Upload to Database</button>
     </form>
@@ -139,7 +139,7 @@
             Swal.fire({
                 title: 'Error!',
                 text: 'There was an issue with the image upload.',
-                icon: 'error',
+                icon: 'error',  
                 confirmButtonColor: '#b946c4',
                 background: '#2a2a3a',
                 color: 'white',
