@@ -37,6 +37,10 @@
             justify-content: center;
             gap: 15px;
         }
+        .matched-images .image-card {
+            position: relative;
+            text-align: center;
+        }
         .matched-images img {
             width: 200px;
             height: 200px;
@@ -48,6 +52,20 @@
         .matched-images img:hover {
             transform: scale(1.1);
             border-color: #a63eae;
+        }
+        .download-btn {
+            margin-top: 10px;
+            background-color: #b946c4;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            font-weight: 600;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .download-btn:hover {
+            background-color: #a63eae;
         }
         .back-link {
             display: inline-block;
@@ -71,7 +89,12 @@
     {% if matched_images %}
         <div class="matched-images">
             {% for image in matched_images %}
-                <img src="{{ url_for('static', filename='image_database/' + image) }}" alt="Matched Image">
+                <div class="image-card">
+                    <img src="{{ url_for('static', filename='image_database/' + image) }}" alt="Matched Image">
+                    <a href="{{ url_for('static', filename='image_database/' + image) }}" download="{{ image }}" class="download-btn">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                </div>
             {% endfor %}
         </div>
     {% else %}
