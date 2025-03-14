@@ -1,58 +1,60 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 import os
 import cv2
 import numpy as np
+import face_recognition
+from werkzeug.utils import secure_filename
+import pickle
+from threading import Lock
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads/'
 app.config['DATABASE_FOLDER'] = 'static/image_database/'
+app.config['FEATURES_CACHE'] = 'static/features_cache.pkl'
+app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
-# Ensure the upload and database folders exist
+# Ensure directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['DATABASE_FOLDER'], exist_ok=True)
 
-# Load pre-trained face detection and recognition models
-face_detector = cv2.dnn.readNetFromCaffe(
-    "deploy.prototxt",  # Path to prototxt file
-    "res10_300x300_ssd_iter_140000.caffemodel"  # Path to pre-trained model
-)
+# Thread lock for cache updates
+cache_lock = Lock()
 
-face_recognizer = cv2.dnn.readNetFromTorch("openface_nn4.small2.v1.t7")  # Pre-trained OpenFace model
+def allowed_file(filename):
+    """Check if the file has an allowed extension."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+def load_or_create_cache():
+    """Load cached features or create a new cache."""
+    if os.path.exists(app.config['FEATURES_CACHE']):
+        with open(app.config['FEATURES_CACHE'], 'rb') as f:
+            return pickle.load(f)
+    return {}
+
+def save_cache(cache):
+    """Save features to cache."""
+    with cache_lock:
+        with open(app.config['FEATURES_CACHE'], 'wb') as f:
+            pickle.dump(cache, f)
 
 def extract_face_features(image_path):
-    """Extract facial features from an image using OpenCV's DNN module."""
-    image = cv2.imread(image_path)
-    if image is None:
+    """Extract facial features using face_recognition library."""
+    try:
+        image = face_recognition.load_image_file(image_path)
+        encodings = face_recognition.face_encodings(image, model='large')  # 'large' model for better accuracy
+        if not encodings:
+            return None
+        return encodings[0]  # Return the first face's encoding
+    except Exception as e:
+        print(f"Error extracting features from {image_path}: {e}")
         return None
 
-    (h, w) = image.shape[:2]
-    blob = cv2.dnn.blobFromImage(cv2.resize(image, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
-    
-    # Detect faces
-    face_detector.setInput(blob)
-    detections = face_detector.forward()
-
-    if len(detections) == 0:
-        return None
-
-    # Assume the first detected face is the target
-    box = detections[0, 0, 0, 3:7] * np.array([w, h, w, h])
-    (startX, startY, endX, endY) = box.astype("int")
-    face = image[startY:endY, startX:endX]
-
-    # Extract facial features
-    face_blob = cv2.dnn.blobFromImage(face, 1.0 / 255, (96, 96), (0, 0, 0), swapRB=True, crop=False)
-    face_recognizer.setInput(face_blob)
-    features = face_recognizer.forward()
-
-    return features.flatten()
-
-def compare_faces(features1, features2, threshold=0.6):
-    """Compare two facial feature vectors using cosine similarity."""
-    if features1 is None or features2 is None:
+def compare_faces(known_encoding, unknown_encoding, tolerance=0.6):
+    """Compare two face encodings using Euclidean distance."""
+    if known_encoding is None or unknown_encoding is None:
         return False
-    similarity = np.dot(features1, features2) / (np.linalg.norm(features1) * np.linalg.norm(features2))
-    return similarity > threshold
+    distance = face_recognition.face_distance([known_encoding], unknown_encoding)[0]
+    return distance < tolerance  # Lower distance = better match
 
 @app.route('/')
 def index():
@@ -61,40 +63,69 @@ def index():
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if request.method == 'POST':
+        if 'image' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        
         file = request.files['image']
-        if file:
-            file_path = os.path.join(app.config['DATABASE_FOLDER'], file.filename)
-            file.save(file_path)
-            return "Image uploaded successfully!"
+        if file.filename == '' or not allowed_file(file.filename):
+            return jsonify({'error': 'Invalid file'}), 400
+        
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['DATABASE_FOLDER'], filename)
+        file.save(file_path)
+
+        # Update feature cache
+        features = extract_face_features(file_path)
+        if features is not None:
+            cache = load_or_create_cache()
+            cache[filename] = features
+            save_cache(cache)
+        
+        return jsonify({'message': 'Image uploaded successfully!'}), 200
+    
     return render_template('admin.html')
 
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'selfie' not in request.files:
-        return redirect(request.url)
+        return jsonify({'error': 'No selfie provided'}), 400
     
     file = request.files['selfie']
-    if file.filename == '':
-        return redirect(request.url)
+    if file.filename == '' or not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file'}), 400
     
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
     
     # Extract features from the uploaded selfie
     uploaded_features = extract_face_features(file_path)
     if uploaded_features is None:
-        return "No face detected in the uploaded image."
+        return jsonify({'error': 'No face detected in the uploaded image'}), 400
     
-    # Compare with images in the database
+    # Load cached database features
+    cache = load_or_create_cache()
+    
+    # Compare with database images
     matched_images = []
-    for db_image in os.listdir(app.config['DATABASE_FOLDER']):
-        db_image_path = os.path.join(app.config['DATABASE_FOLDER'], db_image)
-        db_features = extract_face_features(db_image_path)
-        
-        if db_features is not None and compare_faces(uploaded_features, db_features):
+    for db_image, db_features in cache.items():
+        if compare_faces(uploaded_features, db_features, tolerance=0.6):
             matched_images.append(db_image)
+    
+    # If cache is incomplete, scan the database folder
+    if not cache or len(cache) < len(os.listdir(app.config['DATABASE_FOLDER'])):
+        for db_image in os.listdir(app.config['DATABASE_FOLDER']):
+            if db_image in cache:
+                continue
+            db_image_path = os.path.join(app.config['DATABASE_FOLDER'], db_image)
+            db_features = extract_face_features(db_image_path)
+            if db_features is not None:
+                cache[db_image] = db_features
+                if compare_faces(uploaded_features, db_features, tolerance=0.6):
+                    matched_images.append(db_image)
+        save_cache(cache)
     
     return render_template('result.html', matched_images=matched_images)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)

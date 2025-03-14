@@ -4,108 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Matched Results</title>
-
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-
-    <!-- Custom Styles -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4A4A4A',
+                        secondary: '#8C8C8C'
+                    },
+                    borderRadius: {
+                        'none': '0px',
+                        'sm': '4px',
+                        DEFAULT: '8px',
+                        'md': '12px',
+                        'lg': '16px',
+                        'xl': '20px',
+                        '2xl': '24px',
+                        '3xl': '32px',
+                        'full': '9999px',
+                        'button': '8px'
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #1e1e2d;
-            color: white;
-            text-align: center;
-            padding: 30px;
+        .font-playfair { font-family: 'Playfair Display', serif; }
+        .font-montserrat { font-family: 'Montserrat', sans-serif; }
+        .result-animation {
+            animation: fadeIn 0.5s ease-in-out forwards;
         }
-        h1 {
-            color: #b946c4;
-            font-weight: 600;
-            margin-bottom: 20px;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .container {
-            max-width: 800px;
-        }
-        .matched-images {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-        }
-        .matched-images .image-card {
-            position: relative;
-            text-align: center;
-        }
-        .matched-images img {
-            width: 200px;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 10px;
-            border: 3px solid #b946c4;
-            transition: 0.3s;
-        }
-        .matched-images img:hover {
+        .image-card img:hover {
             transform: scale(1.1);
-            border-color: #a63eae;
-        }
-        .download-btn {
-            margin-top: 10px;
-            background-color: #b946c4;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            font-weight: 600;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .download-btn:hover {
-            background-color: #a63eae;
-        }
-        .back-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #b946c4;
-            font-weight: 600;
-            text-decoration: none;
-            transition: 0.3s;
-        }
-        .back-link:hover {
-            text-decoration: underline;
-            color: #a63eae;
         }
     </style>
 </head>
-<body>
-
-<div class="container">
-    <h1>Matched Images</h1>
-
-    {% if matched_images %}
-        <div class="matched-images">
-            {% for image in matched_images %}
-                <div class="image-card">
-                    <img src="{{ url_for('static', filename='image_database/' + image) }}" alt="Matched Image">
-                    <a href="{{ url_for('static', filename='image_database/' + image) }}" download="{{ image }}" class="download-btn">
-                        <i class="fas fa-download"></i> Download
-                    </a>
-                </div>
-            {% endfor %}
+<body class="min-h-screen bg-[#F5F5F5]">
+    <div class="container mx-auto px-4 py-12">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl md:text-5xl font-playfair text-primary text-center font-bold mb-4">Matched Results</h1>
+            <p class="text-lg font-montserrat text-secondary text-center mb-12">Here are the faces we found similar to your selfie</p>
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+                {% if matched_images %}
+                    <div class="matched-images grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        {% for image in matched_images %}
+                            <div class="image-card opacity-0" style="animation-delay: {{ loop.index0 * 0.2 }}s;">
+                                <img src="{{ url_for('static', filename='image_database/' + image) }}" alt="Matched Image" class="w-full h-48 object-cover rounded-lg border-2 border-secondary">
+                                <a href="{{ url_for('static', filename='image_database/' + image) }}" download="{{ image }}" class="block mt-4 py-2 bg-primary text-white font-montserrat font-medium rounded-button text-center transition-transform hover:scale-[1.02]">
+                                    <i class="ri-download-line mr-2"></i>Download
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center font-montserrat text-secondary">No matches found.</p>
+                {% endif %}
+                <a href="/" class="block text-center font-montserrat text-primary mt-8 hover:underline">
+                    <i class="ri-arrow-left-line mr-2"></i>Back to Home
+                </a>
+            </div>
         </div>
-    {% else %}
-        <p class="text-danger">No matches found.</p>
-    {% endif %}
+    </div>
 
-    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
-</div>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const imageCards = document.querySelectorAll('.image-card');
+            imageCards.forEach(card => {
+                card.classList.add('result-animation');
+            });
+        });
+    </script>
 </body>
 </html>
